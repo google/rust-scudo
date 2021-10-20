@@ -1,9 +1,5 @@
 mod ffi;
+mod global_allocator;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+pub use ffi::{map_chunks, print_stats};
+pub use global_allocator::GlobalScudoAllocator;

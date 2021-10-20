@@ -45,6 +45,11 @@ pub fn map_chunks(mut f: &mut dyn FnMut(c_ulong, size_t), base_address: usize, s
     };
 }
 
+// Prints the static Scudo Allocator's internal statistics.
+pub fn print_stats() {
+    unsafe { __scudo_print_stats() }
+}
+
 #[test]
 fn test_map_allocator() {
     // We send Scudo a large allocation which will be handled by the MapAllocator. This means
