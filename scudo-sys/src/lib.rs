@@ -2,7 +2,6 @@ use libc::{c_int, c_ulong, c_void, size_t, uintptr_t};
 
 type ChunkCallback = extern "C" fn(base: c_ulong, size: size_t, arg: *mut c_void);
 extern "C" {
-    // TODO: Set Scudo_prefix to be __scudo so we cannot be confused with system malloc.
     pub fn scudo_free(ptr: *mut c_void);
     // Preferred over `malloc` because, in Rust, size and alignment are always known at
     // allocation sites.
@@ -43,11 +42,6 @@ pub fn map_chunks(mut f: &mut dyn FnMut(c_ulong, size_t), base_address: usize, s
         scudo_malloc_iterate(base_address, size, callback, ptr_to_dynamic_fn);
         scudo_malloc_enable();
     };
-}
-
-// Prints the static Scudo Allocator's internal statistics.
-pub fn print_stats() {
-    unsafe { __scudo_print_stats() }
 }
 
 #[test]

@@ -1,7 +1,6 @@
+use libc::{c_ulong, c_void, size_t};
+use scudo_sys::{scudo_free, scudo_posix_memalign};
 use std::alloc::{GlobalAlloc, Layout};
-
-use crate::ffi::{scudo_free, scudo_posix_memalign};
-use libc::c_void;
 
 /// Zero sized type representing the global static scudo allocator declared in C.
 pub struct GlobalScudoAllocator;
@@ -24,5 +23,19 @@ unsafe impl GlobalAlloc for GlobalScudoAllocator {
     }
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
         scudo_free(ptr as *mut c_void)
+    }
+}
+
+impl GlobalScudoAllocator {
+    /// Prints the global Scudo allocator's internal statistics.
+    pub fn print_stats() {
+        unsafe { scudo_sys::__scudo_print_stats() }
+    }
+    /// Maps `f` over all chunks in the address range
+    /// `[base_ddress, base_adress + size)`, locking the allocator.
+    /// `f` must not allocate or deallocate or it will deadlock.
+    /// `f` take two arguments, allocation address and size.
+    pub fn map_chunks(f: &mut dyn FnMut(c_ulong, size_t), base_address: usize, size: usize) {
+        scudo_sys::map_chunks(f, base_address, size);
     }
 }

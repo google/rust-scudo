@@ -1,6 +1,6 @@
 // To use the Scudo allocator in your program, simply add the next 4 lines.
-extern crate rust_scudo;
-use rust_scudo::GlobalScudoAllocator;
+extern crate scudo;
+use scudo::GlobalScudoAllocator;
 #[global_allocator]
 static SCUDO_ALLOCATOR: GlobalScudoAllocator = GlobalScudoAllocator;
 
@@ -15,7 +15,7 @@ fn main() {
         x.len(),
         y.len()
     );
-    rust_scudo::print_stats();
+    GlobalScudoAllocator::print_stats();
 
     x.clear();
     y.clear();
@@ -30,7 +30,7 @@ fn test_box_and_vec_use_scudo() {
     let mut seen_x = false;
     let mut seen_y = false;
     let mut seen_z = false;
-    rust_scudo::map_chunks(
+    GlobalScudoAllocator::map_chunks(
         &mut |_base_address, chunk_size| {
             seen_x |= chunk_size == x.len();
             seen_y |= chunk_size == 8 * 5;
