@@ -1,5 +1,6 @@
-use libc::{c_ulong, c_void, size_t};
+use libc::c_void;
 use scudo_sys::{scudo_free, scudo_posix_memalign};
+
 use std::alloc::{GlobalAlloc, Layout};
 
 /// Zero sized type representing the global static scudo allocator declared in C.
@@ -31,11 +32,70 @@ impl GlobalScudoAllocator {
     pub fn print_stats() {
         unsafe { scudo_sys::__scudo_print_stats() }
     }
-    /// Maps `f` over all chunks in the address range
-    /// `[base_ddress, base_adress + size)`, locking the allocator.
-    /// `f` must not allocate or deallocate or it will deadlock.
-    /// `f` take two arguments, allocation address and size.
-    pub fn map_chunks(f: &mut dyn FnMut(c_ulong, size_t), base_address: usize, size: usize) {
-        scudo_sys::map_chunks(f, base_address, size);
+}
+
+#[cfg(test)]
+pub mod test {
+    use super::*;
+
+    use libc::{c_ulong, size_t};
+    use scudo_sys::{scudo_malloc_disable, scudo_malloc_enable, scudo_malloc_iterate};
+    use std::alloc::Layout;
+
+    extern "C" fn contains(_address: c_ulong, size: size_t, pair: *mut c_void) {
+        let (target_size, count) = unsafe { &mut *(pair as *mut (usize, usize)) };
+        if size == *target_size {
+            *count += 1;
+        }
     }
+
+    /// Test-only function that returns the number of allocations og a given size.
+    fn count_allocations_by_size(size: usize) -> usize {
+        let mut size_and_count = (size, 0usize);
+        unsafe {
+            scudo_malloc_disable();
+            scudo_malloc_iterate(
+                0,
+                usize::MAX,
+                contains,
+                &mut size_and_count as *mut (usize, usize) as *mut c_void,
+            );
+            scudo_malloc_enable();
+        }
+        size_and_count.1
+    }
+    #[test]
+    fn test_alloc_and_dealloc_use_scudo() {
+        let a = GlobalScudoAllocator;
+        let layout = Layout::from_size_align(4242, 16).unwrap();
+        assert_eq!(count_allocations_by_size(4242), 0);
+        let p = unsafe { a.alloc(layout) };
+        assert_eq!(count_allocations_by_size(4242), 1);
+        unsafe { a.dealloc(p, layout) };
+        assert_eq!(count_allocations_by_size(4242), 0);
+    }
+
+    #[global_allocator]
+    static A: GlobalScudoAllocator = GlobalScudoAllocator;
+
+    #[test]
+    fn test_vec_uses_scudo() {
+        assert_eq!(count_allocations_by_size(8200_1337), 0);
+        let mut v = vec![8u8; 8200_1337];
+        assert_eq!(count_allocations_by_size(8200_1337), 1);
+        v.clear();
+        v.shrink_to_fit();
+        assert_eq!(count_allocations_by_size(8200_1337), 0);
+    }
+
+    #[test]
+    fn test_box_uses_scudo() {
+        assert_eq!(count_allocations_by_size(20), 0);
+        let b = Box::new([3.0f32; 5]);
+        assert_eq!(count_allocations_by_size(20), 1);
+        // Move b
+        (move || b)();
+        assert_eq!(count_allocations_by_size(20), 0);
+    }
+
 }
