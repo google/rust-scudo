@@ -7,6 +7,7 @@ extern "C" {
     // allocation sites.
     pub fn scudo_posix_memalign(memptr: *mut *mut c_void, alignment: size_t, size: size_t)
         -> c_int;
+    pub fn scudo_malloc(size: size_t) -> *mut c_void;
     /// Call `callback` on all allocations between addresses `[base, base + size)`.
     pub fn scudo_malloc_iterate(
         base: uintptr_t,

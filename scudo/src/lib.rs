@@ -49,7 +49,7 @@ pub mod test {
         }
     }
 
-    /// Test-only function that returns the number of allocations og a given size.
+    /// Test-only function that returns the number of allocations of a given size.
     fn count_allocations_by_size(size: usize) -> usize {
         let mut size_and_count = (size, 0usize);
         unsafe {
@@ -97,5 +97,20 @@ pub mod test {
         (move || b)();
         assert_eq!(count_allocations_by_size(20), 0);
     }
+
+    #[test]
+    fn test_1byte_box_uses_scudo() {
+        // Unlike the other arbitrary size allocations, it seems
+        // Rust's test harness does have some 1 byte allocations so we cannot
+        // assert there are 0, then 1, then 0.
+        let before = count_allocations_by_size(1);
+        let b = Box::new(1i8);
+        assert_eq!(count_allocations_by_size(1), before + 1);
+        // Move b
+        (move || b)();
+        assert_eq!(count_allocations_by_size(1), before);
+    }
+
+
 
 }
