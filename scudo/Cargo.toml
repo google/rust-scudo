@@ -8,4 +8,4 @@ license-file = "LICENSE.md"
 
 [dependencies]
 libc = "0.2.104"
-scudo-sys = { path = "../scudo-sys" }
+scudo-sys = { path = "../scudo-sys", version = "0.1.0" }
