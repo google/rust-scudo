@@ -5,7 +5,7 @@ use std::path::Path;
 
 fn main() {
     println!("cargo:rerun-if-changed=src/scudo_rust_wrapper.c");
-    let scudo_dir = Path::new("llvm-project/compiler-rt/lib/scudo/standalone");
+    let scudo_dir = Path::new("scudo-standalone");
 
     // Get all .cpp files besides the wrappers.
     let scudo_cpp_files = read_dir(scudo_dir).unwrap().filter_map(|e| {

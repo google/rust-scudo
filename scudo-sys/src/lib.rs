@@ -23,4 +23,3 @@ extern "C" {
 
     pub fn __scudo_print_stats();
 }
-
