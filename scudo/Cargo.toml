@@ -3,6 +3,10 @@ name = "scudo"
 version = "0.1.0"
 edition = "2018"
 license-file = "LICENSE.md"
+authors = ["Google LLC"]
+description = "Rust Bindings for the Scudo Hardened Allocator"
+homepage = "https://llvm.org/docs/ScudoHardenedAllocator.html"
+# TODO(cneo): Repository.
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
