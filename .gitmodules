@@ -1,4 +1,5 @@
-[submodule "scudo-sys/llvm-project"]
-	path = scudo-sys/llvm-project
-	url = https://github.com/llvm/llvm-project
+[submodule "third_party/llvm/llvm-project"]
+	path = third_party/llvm/llvm-project
+	url = https://github.com/llvm/llvm-project.git
+	branch = release/13.x
 	shallow = true
