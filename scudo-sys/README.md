@@ -1,7 +1,14 @@
-Rust/C FFI bindings for the [Scudo Hardened Allocator](https://llvm.org/docs/ScudoHardenedAllocator.html).
+C-Rust FFI bindings for the Scudo Hardened Allocator.
 
-Scudo is a dynamic user-mode memory allocator, or heap allocator, designed to be
-resilient against heap-related vulnerabilities (such as heap-based buffer
-overflow, use after free, and double free) while maintaining performance.
+Most users should prefer the idiomatic Rust binding crate,
+[scudo](https://crates.io/crates/scudo).
 
-This crate builds scudo and defines the unsafe Rust bindings.
+Scudo is a user space heap allocator designed to be reistent to heap
+exploitation. **It is useful to you if your program allocates memory and you
+depend on unsafe code or you want defense-in-depth against heap exploitation.**
+In addition to security, it achieves competitive performance against jemalloc,
+tcmalloc and others.
+
+- [Performance Comparison](http://expertmiami.blogspot.com/2019/05/what-is-scudo-hardened-allocator_10.html)
+- [Main Project](https://llvm.org/docs/ScudoHardenedAllocator.html)
+
