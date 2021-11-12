@@ -12,39 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use libc::c_void;
-use scudo_sys::{scudo_free, scudo_posix_memalign};
+use scudo_sys::{scudo_allocate, scudo_deallocate, scudo_print_stats, SCUDO_MIN_ALIGN};
 
 use std::alloc::{GlobalAlloc, Layout};
+use std::cmp::max;
 
 /// Zero sized type representing the global static scudo allocator declared in C.
 pub struct GlobalScudoAllocator;
 
+/// Returns `layout` or the minimum size/align layout for scudo if its too small.
+fn fit_layout(layout: Layout) -> Layout {
+    // SAFETY: SCUDO_MIN_ALIGN is constant and known to be powers of 2.
+    let min_align = unsafe { SCUDO_MIN_ALIGN } as usize;
+    let align = max(min_align, layout.align());
+    // SAFETY: Size and align are good by construction.
+    unsafe { Layout::from_size_align_unchecked(layout.size(), align) }
+}
+
 unsafe impl GlobalAlloc for GlobalScudoAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // Use `posix_memalign` over `malloc` because Rust allocators always give
-        // type and alignment, and may be overaligned. `memalign`, `valloc` and
-        // `pvalloc` are obsolete according to linux's man page.
-        // NOTE: Scudo enforces a minimum alignment of sizeof(void*).
-        let mut ptr = std::ptr::null_mut();
-        let min_size = std::mem::size_of::<*const c_void>();
-        let alignment = std::cmp::max(min_size, layout.align());
-        //TODO(cneo): std::intrinsics::unlikely.
-        if scudo_posix_memalign(&mut ptr as _, alignment, layout.size()) == 0 {
-            ptr as *mut u8
-        } else {
-            std::ptr::null_mut()
-        }
+        let layout = fit_layout(layout);
+        scudo_allocate(layout.size(), layout.align()) as _
     }
-    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        scudo_free(ptr as *mut c_void)
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        let layout = fit_layout(layout);
+        scudo_deallocate(ptr as _, layout.size(), layout.align());
     }
 }
 
 impl GlobalScudoAllocator {
     /// Prints the global Scudo allocator's internal statistics.
     pub fn print_stats() {
-        unsafe { scudo_sys::__scudo_print_stats() }
+        unsafe { scudo_print_stats() }
     }
 }
 
@@ -52,8 +51,8 @@ impl GlobalScudoAllocator {
 pub mod test {
     use super::*;
 
-    use libc::{c_ulong, size_t};
-    use scudo_sys::{scudo_malloc_disable, scudo_malloc_enable, scudo_malloc_iterate};
+    use libc::{c_ulong, c_void, size_t};
+    use scudo_sys::{scudo_disable, scudo_enable, scudo_iterate};
     use std::alloc::Layout;
 
     extern "C" fn contains(_address: c_ulong, size: size_t, pair: *mut c_void) {
@@ -67,14 +66,12 @@ pub mod test {
     fn count_allocations_by_size(size: usize) -> usize {
         let mut size_and_count = (size, 0usize);
         unsafe {
-            scudo_malloc_disable();
-            scudo_malloc_iterate(
-                0,
-                usize::MAX,
+            scudo_disable();
+            scudo_iterate(
                 contains,
                 &mut size_and_count as *mut (usize, usize) as *mut c_void,
             );
-            scudo_malloc_enable();
+            scudo_enable();
         }
         size_and_count.1
     }
@@ -124,7 +121,4 @@ pub mod test {
         (move || b)();
         assert_eq!(count_allocations_by_size(1), before);
     }
-
-
-
 }

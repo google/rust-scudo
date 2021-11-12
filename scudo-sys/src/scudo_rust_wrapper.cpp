@@ -19,20 +19,55 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// This is similar with the C wrapper except we define a prefix.
-// Without it, it may be harder to know if `malloc` is Scudo's or not.
-#define SCUDO_PREFIX(name) CONCATENATE(scudo_, name)
-#define SCUDO_ALLOCATOR Allocator
-
-extern "C" void SCUDO_PREFIX(malloc_postinit)();
-
+// SCUDO_ALLOCATOR below is the global scudo allocator to be used in Rust.
+extern "C" void scudo_postinit();
 SCUDO_REQUIRE_CONSTANT_INITIALIZATION
-scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)> SCUDO_ALLOCATOR;
+scudo::Allocator<scudo::Config, scudo_postinit> SCUDO_ALLOCATOR;
 
+// Define the Rust-C FFI.
+// We could depend on wrapper_c.inc and share an interface with posix/C but this
+// way we can have a more rust-y interface with Scudo, e.g. knowing size and
+// alignment on both allocate and deallocate.
+extern "C" {
 
-#include "wrappers_c.inc"
+size_t SCUDO_MIN_ALIGN = 1 << SCUDO_MIN_ALIGNMENT_LOG;
+
+void* scudo_allocate(size_t size, size_t alignment) {
+  return SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc,
+                                  alignment);
+}
+
+void scudo_deallocate(void* ptr, size_t size, size_t alignment) {
+  SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc, size,
+                             alignment);
+}
+
+void scudo_iterate(void(*callback)(uintptr_t base, size_t size, void* arg),
+                   void* arg) {
+  // Set base=0 size=MAX to iterate over all chunks in memory.
+  SCUDO_ALLOCATOR.iterateOverChunks(/*base=*/0, /*size=*/(size_t)-1, callback,
+                                    arg);
+}
+
+void scudo_enable() {
+  SCUDO_ALLOCATOR.enable();
+}
+
+void scudo_disable() {
+  SCUDO_ALLOCATOR.disable();
+}
+
+void scudo_postinit() {
+  SCUDO_ALLOCATOR.initGwpAsan();
+  pthread_atfork(scudo_disable, scudo_enable, scudo_enable);
+}
+
+void scudo_print_stats() {
+  SCUDO_ALLOCATOR.printStats();
+}
+
+}  // extern "C"
 
 #undef SCUDO_ALLOCATOR
 #undef SCUDO_PREFIX
 
-extern "C" INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }

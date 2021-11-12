@@ -41,5 +41,6 @@ function run_test {
 run_test double_free "invalid chunk state"
 run_test misaligned_ptr "misaligned pointer"
 run_test corrupted_chunk_header "corrupted chunk header"
+run_test delete_size_mismatch "invalid sized delete"
 
 echo "All tests pass"
