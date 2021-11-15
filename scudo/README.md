@@ -19,3 +19,6 @@ use scudo::GlobalScudoAllocator;
 #[global_allocator]
 static SCUDO_ALLOCATOR: GlobalScudoAllocator = GlobalScudoAllocator;
 ```
+
+If you want to use the unstable `std::alloc::Allocator` trait, use the
+`allocator_api` feature.

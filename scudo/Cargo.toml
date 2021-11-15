@@ -1,6 +1,6 @@
 [package]
 name = "scudo"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2018"
 license-file = "LICENSE.md"
 authors = ["Google LLC"]
@@ -13,3 +13,6 @@ repository = "https://github.com/google/rust-scudo"
 [dependencies]
 libc = "0.2.104"
 scudo-sys = { path = "../scudo-sys", version = "0.2.0" }
+
+[features]
+allocator_api = []

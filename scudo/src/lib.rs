@@ -11,13 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![no_std]
+#![cfg_attr(feature = "allocator_api", feature(allocator_api))]
+#![cfg_attr(feature = "allocator_api", feature(nonnull_slice_from_raw_parts))]
+#[cfg(test)]
+#[macro_use]
+extern crate std;
 
 use scudo_sys::{scudo_allocate, scudo_deallocate, scudo_print_stats, SCUDO_MIN_ALIGN};
 
-use std::alloc::{GlobalAlloc, Layout};
-use std::cmp::max;
+use core::alloc::{GlobalAlloc, Layout};
+use core::cmp::max;
 
 /// Zero sized type representing the global static scudo allocator declared in C.
+#[derive(Clone, Copy)]
 pub struct GlobalScudoAllocator;
 
 /// Returns `layout` or the minimum size/align layout for scudo if its too small.
@@ -47,13 +54,34 @@ impl GlobalScudoAllocator {
     }
 }
 
+#[cfg(feature = "allocator_api")]
+use core::alloc::AllocError;
+#[cfg(feature = "allocator_api")]
+use core::ptr::NonNull;
+#[cfg(feature = "allocator_api")]
+unsafe impl core::alloc::Allocator for GlobalScudoAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let layout = fit_layout(layout);
+        // TODO(cneo): Scudo buckets and therefore overallocates. Use SizeClassMap to
+        // return the correct length for the slice?
+        let ptr = unsafe { scudo_allocate(layout.size(), layout.align()) } as _;
+        let n = NonNull::new(ptr).ok_or(AllocError)?;
+        Ok(NonNull::slice_from_raw_parts(n, layout.size()))
+    }
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        let layout = fit_layout(layout);
+        scudo_deallocate(ptr.as_ptr() as _, layout.size(), layout.align());
+    }
+}
+
 #[cfg(test)]
 pub mod test {
     use super::*;
+    use std::prelude::v1::*;
 
+    use core::alloc::Layout;
     use libc::{c_ulong, c_void, size_t};
     use scudo_sys::{scudo_disable, scudo_enable, scudo_iterate};
-    use std::alloc::Layout;
 
     extern "C" fn contains(_address: c_ulong, size: size_t, pair: *mut c_void) {
         let (target_size, count) = unsafe { &mut *(pair as *mut (usize, usize)) };
@@ -99,6 +127,16 @@ pub mod test {
         assert_eq!(count_allocations_by_size(8200_1337), 0);
     }
 
+    #[cfg(feature = "allocator_api")]
+    #[test]
+    fn test_vec_with_custom_allocator_uses_scudo() {
+        assert_eq!(count_allocations_by_size(8200_4242), 0);
+        let mut v = Vec::<u8, GlobalScudoAllocator>::with_capacity_in(8200_4242, A);
+        assert_eq!(count_allocations_by_size(8200_4242), 1);
+        v.shrink_to_fit();
+        assert_eq!(count_allocations_by_size(8200_4242), 0);
+    }
+
     #[test]
     fn test_box_uses_scudo() {
         assert_eq!(count_allocations_by_size(20), 0);
@@ -108,6 +146,18 @@ pub mod test {
         (move || b)();
         assert_eq!(count_allocations_by_size(20), 0);
     }
+
+    #[cfg(feature = "allocator_api")]
+    #[test]
+    fn test_box_with_custom_allocator_uses_scudo() {
+        assert_eq!(count_allocations_by_size(28), 0);
+        let b = Box::new_in([3.0f32; 7], A);
+        assert_eq!(count_allocations_by_size(28), 1);
+        // Move b
+        (move || b)();
+        assert_eq!(count_allocations_by_size(28), 0);
+    }
+
 
     #[test]
     fn test_1byte_box_uses_scudo() {

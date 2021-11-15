@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#![no_std]
 use libc::{c_ulong, c_void, size_t};
 
 type ChunkCallback = extern "C" fn(base: c_ulong, size: size_t, arg: *mut c_void);
