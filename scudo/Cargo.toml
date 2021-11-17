@@ -2,7 +2,7 @@
 name = "scudo"
 version = "0.1.2"
 edition = "2018"
-license-file = "LICENSE.md"
+license = "Apache 2.0"
 authors = ["Google LLC"]
 description = "Rust Bindings for the Scudo Hardened Allocator"
 homepage = "https://llvm.org/docs/ScudoHardenedAllocator.html"
