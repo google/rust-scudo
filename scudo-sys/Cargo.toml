@@ -2,7 +2,7 @@
 name = "scudo-sys"
 version = "0.2.1"
 edition = "2018"
-license = "Apache 2.0"
+license = "Apache-2.0"
 readme = "README.md"
 authors = ["Google LLC"]
 description = "C/FFI Bindings for the Scudo Hardened Allocator"
