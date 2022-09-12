@@ -83,35 +83,53 @@ pub mod test {
     use libc::{c_ulong, c_void, size_t};
     use scudo_sys::{scudo_disable, scudo_enable, scudo_iterate};
 
-    extern "C" fn contains(_address: c_ulong, size: size_t, pair: *mut c_void) {
-        let (target_size, count) = unsafe { &mut *(pair as *mut (usize, usize)) };
-        if size == *target_size {
-            *count += 1;
+    /// Test-only type that holds information about an allocation.
+    #[repr(C)]
+    struct TestAllocation {
+        address: c_ulong,
+        size: size_t,
+        is_valid: bool,
+    }
+
+    extern "C" fn contains(address: c_ulong, size: size_t, expected_allocation: *mut c_void) {
+        let expected_allocation = unsafe { &mut *(expected_allocation as *mut TestAllocation) };
+
+        if expected_allocation.address == address && expected_allocation.size == size {
+            expected_allocation.is_valid = true
         }
     }
 
-    /// Test-only function that returns the number of allocations of a given size.
-    fn count_allocations_by_size(size: usize) -> usize {
-        let mut size_and_count = (size, 0usize);
+    /// Test-only function that returns whether there is an existing allocation at
+    /// `address` with the specified `size`.
+    fn check_alloc_with_address_and_size<T>(address: *const T, size: usize) -> bool {
+        let mut expected_allocation = TestAllocation {
+            address: address as c_ulong,
+            size,
+            is_valid: false,
+        };
+
         unsafe {
             scudo_disable();
             scudo_iterate(
                 contains,
-                &mut size_and_count as *mut (usize, usize) as *mut c_void,
+                &mut expected_allocation as *mut TestAllocation as *mut c_void,
             );
             scudo_enable();
         }
-        size_and_count.1
+
+        expected_allocation.is_valid
     }
+
     #[test]
     fn test_alloc_and_dealloc_use_scudo() {
         let a = GlobalScudoAllocator;
         let layout = Layout::from_size_align(4242, 16).unwrap();
-        assert_eq!(count_allocations_by_size(4242), 0);
+
         let p = unsafe { a.alloc(layout) };
-        assert_eq!(count_allocations_by_size(4242), 1);
+        assert!(check_alloc_with_address_and_size(p, 4242));
+
         unsafe { a.dealloc(p, layout) };
-        assert_eq!(count_allocations_by_size(4242), 0);
+        assert!(!check_alloc_with_address_and_size(p, 4242));
     }
 
     #[global_allocator]
@@ -119,56 +137,68 @@ pub mod test {
 
     #[test]
     fn test_vec_uses_scudo() {
-        assert_eq!(count_allocations_by_size(8200_1337), 0);
         let mut v = vec![8u8; 8200_1337];
-        assert_eq!(count_allocations_by_size(8200_1337), 1);
+        let ptr = v.as_ptr();
+
+        assert!(check_alloc_with_address_and_size(ptr, 8200_1337));
+
         v.clear();
         v.shrink_to_fit();
-        assert_eq!(count_allocations_by_size(8200_1337), 0);
+        assert!(!check_alloc_with_address_and_size(ptr, 8200_1337));
     }
 
     #[cfg(feature = "allocator_api")]
     #[test]
     fn test_vec_with_custom_allocator_uses_scudo() {
-        assert_eq!(count_allocations_by_size(8200_4242), 0);
         let mut v = Vec::<u8, GlobalScudoAllocator>::with_capacity_in(8200_4242, A);
-        assert_eq!(count_allocations_by_size(8200_4242), 1);
+        let ptr = v.as_ptr();
+
+        assert!(check_alloc_with_address_and_size(ptr, 8200_4242));
+
         v.shrink_to_fit();
-        assert_eq!(count_allocations_by_size(8200_4242), 0);
+        assert!(!check_alloc_with_address_and_size(ptr, 8200_4242));
     }
 
     #[test]
     fn test_box_uses_scudo() {
-        assert_eq!(count_allocations_by_size(20), 0);
         let b = Box::new([3.0f32; 5]);
-        assert_eq!(count_allocations_by_size(20), 1);
+        let ptr = b.as_ptr();
+
+        assert!(check_alloc_with_address_and_size(ptr, 20));
+
         // Move b
         (move || b)();
-        assert_eq!(count_allocations_by_size(20), 0);
+        assert!(!check_alloc_with_address_and_size(ptr, 20));
     }
 
     #[cfg(feature = "allocator_api")]
     #[test]
     fn test_box_with_custom_allocator_uses_scudo() {
-        assert_eq!(count_allocations_by_size(28), 0);
         let b = Box::new_in([3.0f32; 7], A);
-        assert_eq!(count_allocations_by_size(28), 1);
+        let ptr = b.as_ptr();
+
+        assert!(check_alloc_with_address_and_size(ptr, 28));
+
         // Move b
         (move || b)();
-        assert_eq!(count_allocations_by_size(28), 0);
+        assert!(!check_alloc_with_address_and_size(ptr, 28));
     }
-
 
     #[test]
     fn test_1byte_box_uses_scudo() {
-        // Unlike the other arbitrary size allocations, it seems
-        // Rust's test harness does have some 1 byte allocations so we cannot
-        // assert there are 0, then 1, then 0.
-        let before = count_allocations_by_size(1);
         let b = Box::new(1i8);
-        assert_eq!(count_allocations_by_size(1), before + 1);
+        let ptr = &*b as *const _;
+
+        assert!(check_alloc_with_address_and_size(
+            ptr,
+            std::mem::size_of::<i8>()
+        ));
+
         // Move b
         (move || b)();
-        assert_eq!(count_allocations_by_size(1), before);
+        assert!(!check_alloc_with_address_and_size(
+            ptr,
+            std::mem::size_of::<i8>()
+        ));
     }
 }
