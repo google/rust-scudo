@@ -1,0 +1,18 @@
+[package]
+name = "scudo-proc-macros"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version="1.0.102", features=["full"] }
+quote = "1.0.21"
+proc-macro2 = "1.0.46"
+
+[dev-dependencies]
+libc = "0.2.104"
+trybuild = "1.0.71"

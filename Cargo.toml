@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "scudo-proc-macros",
     "scudo-sys",
     "scudo",
 ]
