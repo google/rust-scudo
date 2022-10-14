@@ -1,0 +1,7 @@
+error: Expect a valid value like '3.14' or 'true'
+  --> tests/ui/no_ident_or_literal_fail.rs:18:1
+   |
+18 | #[set_scudo_options(name = foo)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `set_scudo_options` (in Nightly builds, run with -Z macro-backtrace for more info)

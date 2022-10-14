@@ -22,25 +22,34 @@
 #
 # [1] https://llvm.org/docs/ScudoHardenedAllocator.html#error-types
 
-cargo build --release --bin crash || exit 1
+cargo build --release --bins || exit 1
 
 # Run the `crash` binary with the first arg. This binary will crash.
 # If the second arg is present in the crash message, the test passes.
 function run_test {
   tmp=$(mktemp)
-  target/release/crash $1 2>$tmp
-  if grep -q "$2" $tmp
+  target/release/$1 $2 2>$tmp
+  if grep -q "$3" $tmp
   then
-    echo "Test '$2' pass"
+    echo "Test '$3' pass"
   else
-    echo "Test '$2' failed"
+    echo "Test '$3' failed"
     exit 1
   fi
 }
 
-run_test double_free "invalid chunk state"
-run_test misaligned_ptr "misaligned pointer"
-run_test corrupted_chunk_header "corrupted chunk header"
-run_test delete_size_mismatch "invalid sized delete"
+function run_crash_test {
+  run_test crash $1 "$2"
+}
+
+function run_macro_test {
+  run_test macro "" "$1"
+}
+
+run_crash_test double_free "invalid chunk state"
+run_crash_test misaligned_ptr "misaligned pointer"
+run_crash_test corrupted_chunk_header "corrupted chunk header"
+run_crash_test delete_size_mismatch "invalid sized delete"
+run_macro_test "Scudo WARNING: found 1 unrecognized flag(s)"
 
 echo "All tests pass"

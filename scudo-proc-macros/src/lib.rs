@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,4 +123,20 @@ pub fn set_scudo_options(attr: TokenStream, item: TokenStream) -> TokenStream {
     result.extend(options_method);
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_fail() {
+        let test_cases = trybuild::TestCases::new();
+        test_cases.compile_fail("tests/ui/*_fail.rs");
+    }
+
+    #[test]
+    fn test_pass() {
+        let test_cases = trybuild::TestCases::new();
+        test_cases.pass("tests/ui/*_pass.rs");
+    }
 }

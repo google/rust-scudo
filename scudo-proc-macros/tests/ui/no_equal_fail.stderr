@@ -1,0 +1,5 @@
+error: expected `=`
+  --> tests/ui/no_equal_fail.rs:18:25
+   |
+18 | #[set_scudo_options(name:true,value:3.14)]
+   |                         ^

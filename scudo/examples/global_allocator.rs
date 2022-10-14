@@ -15,9 +15,12 @@
 // To use the Scudo allocator in your program, simply add the next 4 lines.
 extern crate scudo;
 use scudo::GlobalScudoAllocator;
+use scudo_proc_macros::set_scudo_options;
+
 #[global_allocator]
 static SCUDO_ALLOCATOR: GlobalScudoAllocator = GlobalScudoAllocator;
 
+#[set_scudo_options(delete_size_mismatch = false, release_to_os_interval_ms = 1)]
 fn main() {
     let mut x = vec![[42u8; 1024]; 12345];
     let mut y = vec![Box::new(42u32); 5678];
