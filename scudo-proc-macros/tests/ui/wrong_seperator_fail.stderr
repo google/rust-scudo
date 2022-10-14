@@ -1,0 +1,5 @@
+error: expected `,`
+  --> tests/ui/wrong_seperator_fail.rs:18:30
+   |
+18 | #[set_scudo_options(name=true:value=3.14)]
+   |                              ^

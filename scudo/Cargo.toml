@@ -13,6 +13,7 @@ repository = "https://github.com/google/rust-scudo"
 [dependencies]
 libc = "0.2.104"
 scudo-sys = { path = "../scudo-sys", version = "0.2.0" }
+scudo-proc-macros = { path = "../scudo-proc-macros", version = "0.1.0" }
 
 [features]
 allocator_api = []

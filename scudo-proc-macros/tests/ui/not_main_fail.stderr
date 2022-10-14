@@ -1,0 +1,5 @@
+error: This macro is only allowed to be used on the main method
+  --> tests/ui/not_main_fail.rs:19:4
+   |
+19 | fn not_main() {
+   |    ^^^^^^^^
