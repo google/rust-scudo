@@ -12,6 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! A proc-macro crate for the Rust bindings to the
+//! [Scudo allocator](https://llvm.org/docs/ScudoHardenedAllocator.html#options).
+//!
+//! The exported [`macro@set_scudo_options`] attribute macro allows to set Scudo
+//! options with an annotation on the main method:
+//!
+//! ```rust
+//! use scudo_proc_macros::set_scudo_options;
+//!
+//! #[set_scudo_options(delete_size_mismatch = false, release_to_os_interval_ms = 1)]
+//! fn main() {
+//!     // Use Scudo with the provided options.
+//! }
+//! ```
+//!
+//! For more on Scudo options, visit the official documentation
+//! [here](https://llvm.org/docs/ScudoHardenedAllocator.html#options).
+//!
+//! Please note: the proc macro exported by this crate works both with the
+//! [scudo-sys](https://crates.io/crates/scudo-sys) crate as well as with the
+//! idiomatic Rust binding crate, [scudo](https://crates.io/crates/scudo).
+
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
@@ -83,6 +105,24 @@ fn token_stream_with_error(mut tokens: TokenStream, error: syn::Error) -> TokenS
     tokens
 }
 
+/// Sets options for the Scudo Allocator. This macro takes a list of
+/// comma-seperated options, where each option is in the form
+/// key = value. The value could either be a number like '3.14' or a
+/// boolean value like 'true'. For a list of all available Scudo options,
+/// please visit the [official documentations](https://llvm.org/docs/ScudoHardenedAllocator.html#options)
+/// Pleaso note that this macro can only be used on the main method of a
+/// Rust program.
+///
+/// # Example
+///
+/// ```rust
+/// use scudo_proc_macros::set_scudo_options;
+///
+/// #[set_scudo_options(delete_size_mismatch = false, release_to_os_interval_ms = 1)]
+/// fn main() {
+///     // Use Scudo with the provided options.
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn set_scudo_options(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Check that this macro is only used on the main method.
