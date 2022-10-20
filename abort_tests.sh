@@ -39,11 +39,11 @@ function run_test {
 }
 
 function run_crash_test {
-  run_test crash $1 "$2"
+  run_test scudo_test_crash $1 "$2"
 }
 
 function run_macro_test {
-  run_test macro "" "$1"
+  run_test scudo_test_macro "" "$1"
 }
 
 run_crash_test double_free "invalid chunk state"
