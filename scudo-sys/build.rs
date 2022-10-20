@@ -16,8 +16,10 @@ extern crate cc;
 use std::fs::read_dir;
 use std::path::Path;
 
+const SCUDO_RUST_WRAPPER: &str = "src/scudo_rust_wrapper.cpp";
+
 fn main() {
-    println!("cargo:rerun-if-changed=src/scudo_rust_wrapper.c");
+    println!("cargo:rerun-if-changed={}", SCUDO_RUST_WRAPPER);
     let scudo_dir = Path::new("scudo-standalone");
 
     // Get all .cpp files besides the wrappers.
@@ -34,7 +36,7 @@ fn main() {
 
     cc::Build::new()
         .files(scudo_cpp_files)
-        .file("src/scudo_rust_wrapper.cpp")
+        .file(SCUDO_RUST_WRAPPER)
         .include(scudo_dir)
         .include(scudo_dir.join("include"))
         .cpp(true)
