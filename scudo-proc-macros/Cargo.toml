@@ -2,6 +2,11 @@
 name = "scudo-proc-macros"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+authors = ["Google LLC"]
+description = "Proc macros to use with the Rust bindings for the Scudo Allocator"
+homepage = "https://llvm.org/docs/ScudoHardenedAllocator.html"
+repository = "https://github.com/google/rust-scudo"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
