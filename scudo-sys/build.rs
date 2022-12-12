@@ -34,6 +34,7 @@ fn main() {
         }
     });
 
+    // Opt level is inferred from Cargo and environment variables.
     cc::Build::new()
         .files(scudo_cpp_files)
         .file(SCUDO_RUST_WRAPPER)
@@ -41,11 +42,9 @@ fn main() {
         .include(scudo_dir.join("include"))
         .cpp(true)
         .pic(true) // Position Independent Code.
+        .flag("-pthread")
+        .flag_if_supported("-std=c++17")
+        .flag_if_supported("-msse4.2")
         .shared_flag(true)
         .compile("scudo");
-
-    // Opt level is inferred from Cargo and environment variables.
-
-    // TODO(cneo): -pthread -msse -std=c++17? Those flags are present at:
-    //             https://llvm.org/docs/ScudoHardenedAllocator.html#library
 }
