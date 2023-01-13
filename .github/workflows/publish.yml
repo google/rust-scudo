@@ -1,0 +1,20 @@
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+name: publish
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    name: Publish
+    steps:
+        - uses: actions/checkout@v2
+        - uses: actions-rs/toolchain@v1
+          with:
+              toolchain: stable
+              override: true
+        - run: cargo login ${CRATES_IO_TOKEN}
+          env:
+            CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        - run: ./publish.sh
