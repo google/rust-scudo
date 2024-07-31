@@ -25,7 +25,9 @@ template <class Config> class MockAllocator {
 public:
   using ThisT = MockAllocator<Config>;
   using TSDRegistryT = typename Config::template TSDRegistryT<ThisT>;
-  using CacheT = struct MockCache { volatile scudo::uptr Canary; };
+  using CacheT = struct MockCache {
+    volatile scudo::uptr Canary;
+  };
   using QuarantineCacheT = struct MockQuarantine {};
 
   void init() {
@@ -36,7 +38,7 @@ public:
 
   void unmapTestOnly() { TSDRegistry.unmapTestOnly(this); }
   void initCache(CacheT *Cache) { *Cache = {}; }
-  void commitBack(scudo::TSD<MockAllocator> *TSD) {}
+  void commitBack(UNUSED scudo::TSD<MockAllocator> *TSD) {}
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
   void callPostInitCallback() {}
 
@@ -80,7 +82,7 @@ TEST(ScudoTSDTest, TSDRegistryInit) {
   EXPECT_FALSE(Allocator->isInitialized());
 
   auto Registry = Allocator->getTSDRegistry();
-  Registry->init(Allocator.get());
+  Registry->initOnceMaybe(Allocator.get());
   EXPECT_TRUE(Allocator->isInitialized());
 }
 
@@ -99,16 +101,18 @@ template <class AllocatorT> static void testRegistry() {
 
   bool UnlockRequired;
   auto TSD = Registry->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_NE(TSD, nullptr);
-  EXPECT_EQ(TSD->Cache.Canary, 0U);
+  EXPECT_EQ(TSD->getCache().Canary, 0U);
   if (UnlockRequired)
     TSD->unlock();
 
   Registry->initThreadMaybe(Allocator.get(), /*MinimalInit=*/false);
   TSD = Registry->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_NE(TSD, nullptr);
-  EXPECT_EQ(TSD->Cache.Canary, 0U);
-  memset(&TSD->Cache, 0x42, sizeof(TSD->Cache));
+  EXPECT_EQ(TSD->getCache().Canary, 0U);
+  memset(&TSD->getCache(), 0x42, sizeof(TSD->getCache()));
   if (UnlockRequired)
     TSD->unlock();
 }
@@ -135,18 +139,19 @@ template <typename AllocatorT> static void stressCache(AllocatorT *Allocator) {
   Registry->initThreadMaybe(Allocator, /*MinimalInit=*/false);
   bool UnlockRequired;
   auto TSD = Registry->getTSDAndLock(&UnlockRequired);
+  TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
   EXPECT_NE(TSD, nullptr);
   // For an exclusive TSD, the cache should be empty. We cannot guarantee the
   // same for a shared TSD.
   if (!UnlockRequired)
-    EXPECT_EQ(TSD->Cache.Canary, 0U);
+    EXPECT_EQ(TSD->getCache().Canary, 0U);
   // Transform the thread id to a uptr to use it as canary.
   const scudo::uptr Canary = static_cast<scudo::uptr>(
       std::hash<std::thread::id>{}(std::this_thread::get_id()));
-  TSD->Cache.Canary = Canary;
+  TSD->getCache().Canary = Canary;
   // Loop a few times to make sure that a concurrent thread isn't modifying it.
   for (scudo::uptr I = 0; I < 4096U; I++)
-    EXPECT_EQ(TSD->Cache.Canary, Canary);
+    EXPECT_EQ(TSD->getCache().Canary, Canary);
   if (UnlockRequired)
     TSD->unlock();
 }
@@ -193,6 +198,7 @@ static void stressSharedRegistry(MockAllocator<SharedCaches> *Allocator) {
   bool UnlockRequired;
   for (scudo::uptr I = 0; I < 4096U; I++) {
     auto TSD = Registry->getTSDAndLock(&UnlockRequired);
+    TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
     EXPECT_NE(TSD, nullptr);
     Set.insert(reinterpret_cast<void *>(TSD));
     if (UnlockRequired)
