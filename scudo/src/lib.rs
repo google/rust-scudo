@@ -13,7 +13,6 @@
 // limitations under the License.
 #![no_std]
 #![cfg_attr(feature = "allocator_api", feature(allocator_api))]
-#![cfg_attr(feature = "allocator_api", feature(nonnull_slice_from_raw_parts))]
 #[cfg(test)]
 #[macro_use]
 extern crate std;
@@ -30,7 +29,7 @@ pub struct GlobalScudoAllocator;
 /// Returns `layout` or the minimum size/align layout for scudo if its too small.
 fn fit_layout(layout: Layout) -> Layout {
     // SAFETY: SCUDO_MIN_ALIGN is constant and known to be powers of 2.
-    let min_align = unsafe { SCUDO_MIN_ALIGN } as usize;
+    let min_align = unsafe { SCUDO_MIN_ALIGN };
     let align = max(min_align, layout.align());
     // SAFETY: Size and align are good by construction.
     unsafe { Layout::from_size_align_unchecked(layout.size(), align) }
