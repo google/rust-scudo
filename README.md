@@ -15,5 +15,5 @@ overflow, use after free, and double free) while maintaining performance.
 For more information on the allocator, take a look at the following resources:
 
 - [Main Scudo Project](https://llvm.org/docs/ScudoHardenedAllocator.html).
-- [Blog post about Scudo internals](https://trenchant.io/scudo-hardened-allocator-unofficial-internals-documentation/)
+- [Blog post about Scudo internals](https://www.l3harris.com/newsroom/editorial/2023/10/scudo-hardened-allocator-unofficial-internals-documentation)
 authored by [bsdaemon@](https://github.com/rrbranco)
